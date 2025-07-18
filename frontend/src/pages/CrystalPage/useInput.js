@@ -1,4 +1,3 @@
-// frontend/src/pages/CrystalPage/useInput.js
 import { useEffect, useRef } from 'react';
 
 export const useInput = () => {
@@ -11,7 +10,6 @@ export const useInput = () => {
   });
 
   useEffect(() => {
-    // --- Keyboard Controls ---
     const handleKey = (e, value) => {
       switch (e.key.toLowerCase()) {
         case 'w': case 'arrowup': input.current.forward = value; break;
@@ -34,10 +32,9 @@ export const useInput = () => {
     };
   }, []);
 
-  // --- Gamepad Controls ---
   const handleGamepad = () => {
     const gamepads = navigator.getGamepads();
-    const gamepad = gamepads[0]; // Use the first connected gamepad
+    const gamepad = gamepads[0];
     if (!gamepad) return;
 
     const leftStickY = gamepad.axes[1];
@@ -48,8 +45,6 @@ export const useInput = () => {
     input.current.backward = leftStickY > deadzone;
     input.current.left = leftStickX < -deadzone;
     input.current.right = leftStickX > deadzone;
-
-    // A/X Button (Button 0) for Action
     input.current.action = gamepad.buttons[0].pressed;
   };
 

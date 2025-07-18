@@ -1,40 +1,45 @@
-// frontend/src/pages/CrystalPage/Camera.jsx
-import { useEffect, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { gsap } from 'gsap';
+import React, { useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
-export const Camera = ({ playerRef }) => {
-  const [isIntroDone, setIsIntroDone] = useState(false);
+// --- TWEAKABLE PARAMETERS ---
+// Adjust these to change the camera's feel
+const CAMERA_OFFSET = new THREE.Vector3(0, 1.8, 3.5); 
+const LOOK_AT_OFFSET = new THREE.Vector3(0, 1.2, 0); 
+const POSITION_SMOOTH_SPEED = 3.0;
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsIntroDone(true);
-    }, 500); // Delay before camera starts moving
-    return () => clearTimeout(timer);
-  }, []);
+export const Camera = ({ playerRef, characterRef }) => {
+  const { camera } = useThree();
+  const isInitialized = useRef(false);
 
-  useFrame((state) => {
-    const player = playerRef.current;
-    if (!player || !isIntroDone) return;
+  // Reusable vectors to avoid creating new ones every frame, for performance
+  const targetPosition = new THREE.Vector3();
+  const lookAtTarget = new THREE.Vector3();
 
-    // This is the final close-up position for the camera
-    const targetPosition = new THREE.Vector3(2.5, 1.8, 2.5);
-    
-    const cameraTarget = new THREE.Vector3().copy(player.translation()).add(targetPosition);
-    
-    // Animate the camera to its target position
-    gsap.to(state.camera.position, {
-      x: cameraTarget.x,
-      y: cameraTarget.y,
-      z: cameraTarget.z,
-      duration: 1.5,
-      ease: 'power2.inOut',
-    });
+  useFrame((state, delta) => {
+    // Wait until the player and character are ready
+    if (!playerRef.current || !characterRef.current) return;
 
-    // Make the camera always look at the player
-    const lookAtTarget = new THREE.Vector3().copy(player.translation()).add(new THREE.Vector3(0, 1.5, 0));
-    state.camera.lookAt(lookAtTarget);
+    const playerPosition = playerRef.current.translation();
+    const playerQuaternion = characterRef.current.quaternion;
+
+    // 1. Calculate the camera's ideal position
+    const desiredPosition = CAMERA_OFFSET.clone().applyQuaternion(playerQuaternion);
+    targetPosition.copy(playerPosition).add(desiredPosition);
+
+    // 2. Set initial position or smoothly move the camera
+    if (!isInitialized.current) {
+      // On the first frame, snap the camera instantly into place
+      camera.position.copy(targetPosition);
+      isInitialized.current = true;
+    } else {
+      // On all subsequent frames, move smoothly towards the target
+      camera.position.lerp(targetPosition, delta * POSITION_SMOOTH_SPEED);
+    }
+
+    // 3. Always look at the character
+    lookAtTarget.copy(playerPosition).add(LOOK_AT_OFFSET);
+    camera.lookAt(lookAtTarget);
   });
 
   return null;
